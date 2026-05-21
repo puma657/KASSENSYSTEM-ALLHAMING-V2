@@ -1,3 +1,6 @@
+Hier ist die **aktuelle reparierte Überarbeitung als ganzer Code**. Den alten Code komplett löschen und diesen ganzen Code einfügen:
+
+```html
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -91,11 +94,8 @@
       border: 1px solid #d7dde5;
     }
 
-    .light:hover { background: #e1e7ef; }
-    .danger { background: #b42318; color: white; }
-    .danger:hover { background: #8f1c13; }
-    .blue { background: #2563eb; color: white; }
-    .blue:hover { background: #1d4ed8; }
+    .danger { background: #b42318; }
+    .blue { background: #2563eb; }
 
     .icon {
       width: 46px;
@@ -137,11 +137,6 @@
       background: white;
       color: #1f2933;
       border: 1px solid #d7dde5;
-    }
-
-    .choice:hover {
-      background: #ecfdf5;
-      border-color: #0f766e;
     }
 
     .choice.selected {
@@ -276,12 +271,12 @@
         <div class="form">
           <label>
             Produktname
-            <input id="productNameInput" placeholder="z. B. Apfel">
+            <input id="productNameInput" type="text" placeholder="z. B. Apfel">
           </label>
 
           <label>
             Preis in Euro
-            <input id="productPriceInput" inputmode="decimal" placeholder="1,50">
+            <input id="productPriceInput" type="text" inputmode="decimal" placeholder="1,50">
           </label>
 
           <button id="addProductButton" type="button">Hinzufügen</button>
@@ -295,7 +290,6 @@
     <section id="salesPage" class="page">
       <h2>Produkte auswählen</h2>
       <p>Drücke auf ein Produkt, um es zum Einkauf hinzuzufügen.</p>
-
       <div id="productButtons" class="grid"></div>
 
       <div class="panel" style="margin-top:20px">
@@ -311,18 +305,9 @@
       <p>Wähle aus, wie viel Geld der Kunde gibt.</p>
 
       <div class="summary">
-        <div class="box">
-          Gesamt
-          <strong id="paymentTotal">0,00 €</strong>
-        </div>
-        <div class="box">
-          Gegeben
-          <strong id="paidAmount">0,00 €</strong>
-        </div>
-        <div class="box">
-          Wechselgeld
-          <strong id="changeAmount">0,00 €</strong>
-        </div>
+        <div class="box">Gesamt <strong id="paymentTotal">0,00 €</strong></div>
+        <div class="box">Gegeben <strong id="paidAmount">0,00 €</strong></div>
+        <div class="box">Wechselgeld <strong id="changeAmount">0,00 €</strong></div>
       </div>
 
       <div id="paymentNotice" class="notice"></div>
@@ -342,14 +327,8 @@
       </div>
 
       <div class="two">
-        <div class="box">
-          Verkauft insgesamt
-          <strong id="soldTotal">0</strong>
-        </div>
-        <div class="box">
-          Einnahmen insgesamt
-          <strong id="revenueTotal">0,00 €</strong>
-        </div>
+        <div class="box">Verkauft insgesamt <strong id="soldTotal">0</strong></div>
+        <div class="box">Einnahmen insgesamt <strong id="revenueTotal">0,00 €</strong></div>
       </div>
 
       <div id="statsList" class="list"></div>
@@ -358,432 +337,506 @@
   </div>
 
   <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      function getElement(id) {
-        return document.getElementById(id);
-      }
+    var currentPage = "setup";
+    var products = [];
+    var cart = [];
+    var paid = 0;
+    var stats = { revenue: 0, products: {} };
+    var moneyOptions = [0.05, 0.10, 0.20, 0.50, 1, 2, 5, 10, 20, 50, 100];
 
-      function formatEuro(value) {
-        return value.toLocaleString("de-AT", {
-          style: "currency",
-          currency: "EUR"
-        });
-      }
+    function getElement(id) {
+      return document.getElementById(id);
+    }
 
-      function readJson(key, fallback) {
-        try {
-          var saved = localStorage.getItem(key);
-          return saved ? JSON.parse(saved) : fallback;
-        } catch (error) {
-          return fallback;
-        }
-      }
+    function formatEuro(value) {
+      return Number(value).toLocaleString("de-AT", {
+        style: "currency",
+        currency: "EUR"
+      });
+    }
 
-      function escapeHtml(text) {
-        var span = document.createElement("span");
-        span.textContent = text;
-        return span.innerHTML;
-      }
-
-      var currentPage = "setup";
-      var products = readJson("cashProducts", []);
-      var cart = [];
-      var paid = 0;
-      var stats = readJson("cashStats", { revenue: 0, products: {} });
-      var moneyOptions = [0.05, 0.10, 0.20, 0.50, 1, 2, 5, 10, 20, 50, 100];
-
-      if (!stats || typeof stats !== "object" || !stats.products) {
-        stats = { revenue: 0, products: {} };
-      }
-
-      function saveData() {
+    function saveData() {
+      try {
         localStorage.setItem("cashProducts", JSON.stringify(products));
         localStorage.setItem("cashStats", JSON.stringify(stats));
-      }
+      } catch (error) {}
+    }
 
-      function showNotice(element, message) {
-        element.textContent = message;
-        element.classList.add("show");
-      }
+    function loadData() {
+      try {
+        var savedProducts = localStorage.getItem("cashProducts");
+        var savedStats = localStorage.getItem("cashStats");
 
-      function hideNotice(element) {
-        element.classList.remove("show");
-      }
+        if (savedProducts) products = JSON.parse(savedProducts);
+        if (savedStats) stats = JSON.parse(savedStats);
 
-      function getCartTotal() {
-        return cart.reduce(function (sum, item) {
-          return sum + item.price * item.quantity;
-        }, 0);
-      }
-
-      function showPage(nextPage) {
-        currentPage = nextPage;
-
-        getElement("setupPage").classList.toggle("active", nextPage === "setup");
-        getElement("salesPage").classList.toggle("active", nextPage === "sales");
-        getElement("paymentPage").classList.toggle("active", nextPage === "payment");
-
-        getElement("pageTitle").textContent = {
-          setup: "Produkte anlegen",
-          sales: "Kassieren",
-          payment: "Bezahlung"
-        }[nextPage];
-
-        getElement("backButton").classList.toggle("show", nextPage !== "setup");
-
-        if (nextPage === "sales") renderSales();
-        if (nextPage === "payment") renderPayment();
-      }
-
-      function addProduct() {
-        var name = getElement("productNameInput").value.trim();
-        var price = Number(getElement("productPriceInput").value.replace(",", "."));
-
-        if (!name) {
-          showNotice(getElement("setupNotice"), "Bitte gib einen Produktnamen ein.");
-          return;
+        if (!stats || !stats.products) {
+          stats = { revenue: 0, products: {} };
         }
+      } catch (error) {
+        products = [];
+        stats = { revenue: 0, products: {} };
+      }
+    }
 
-        if (!Number.isFinite(price) || price <= 0) {
-          showNotice(getElement("setupNotice"), "Bitte gib einen gültigen Preis ein.");
-          return;
-        }
+    function escapeHtml(text) {
+      var span = document.createElement("span");
+      span.textContent = text;
+      return span.innerHTML;
+    }
 
-        hideNotice(getElement("setupNotice"));
+    function showNotice(id, message) {
+      var element = getElement(id);
+      element.textContent = message;
+      element.className = "notice show";
+    }
 
-        products.push({
-          id: Date.now().toString(),
-          name: name,
-          price: Math.round(price * 100) / 100
-        });
+    function hideNotice(id) {
+      getElement(id).className = "notice";
+    }
 
-        saveData();
-        getElement("productNameInput").value = "";
-        getElement("productPriceInput").value = "";
-        getElement("productNameInput").focus();
-        renderProducts();
+    function getCartTotal() {
+      var sum = 0;
+      for (var i = 0; i < cart.length; i++) {
+        sum += cart[i].price * cart[i].quantity;
+      }
+      return Math.round(sum * 100) / 100;
+    }
+
+    function showPage(pageName) {
+      currentPage = pageName;
+
+      getElement("setupPage").className = pageName === "setup" ? "page active" : "page";
+      getElement("salesPage").className = pageName === "sales" ? "page active" : "page";
+      getElement("paymentPage").className = pageName === "payment" ? "page active" : "page";
+
+      if (pageName === "setup") {
+        getElement("pageTitle").textContent = "Produkte anlegen";
+        getElement("backButton").className = "icon back";
       }
 
-      function renderProducts() {
-        var list = getElement("productList");
-        list.innerHTML = "";
-
-        if (products.length === 0) {
-          list.innerHTML = "<p>Noch keine Produkte angelegt.</p>";
-          return;
-        }
-
-        products.forEach(function (product) {
-          var row = document.createElement("div");
-          row.className = "row";
-          row.innerHTML = "<strong>" + escapeHtml(product.name) + "</strong><span>" + formatEuro(product.price) + "</span>";
-
-          var deleteButton = document.createElement("button");
-          deleteButton.className = "danger";
-          deleteButton.type = "button";
-          deleteButton.textContent = "Löschen";
-          deleteButton.addEventListener("click", function () {
-            products = products.filter(function (item) {
-              return item.id !== product.id;
-            });
-            cart = cart.filter(function (item) {
-              return item.id !== product.id;
-            });
-            saveData();
-            renderProducts();
-          });
-
-          row.appendChild(deleteButton);
-          list.appendChild(row);
-        });
-      }
-
-      function renderSales() {
-        var productButtons = getElement("productButtons");
-        productButtons.innerHTML = "";
-
-        products.forEach(function (product) {
-          var selected = cart.find(function (item) {
-            return item.id === product.id;
-          });
-
-          var button = document.createElement("button");
-          button.type = "button";
-          button.className = selected ? "choice selected" : "choice";
-          button.innerHTML =
-            "<strong>" + escapeHtml(product.name) + "</strong>" +
-            "<span class=\"price\">" + formatEuro(product.price) + "</span>" +
-            (selected ? "<span class=\"selected-count\">" + selected.quantity + "x</span>" : "");
-
-          button.addEventListener("click", function () {
-            addToCart(product);
-          });
-
-          productButtons.appendChild(button);
-        });
-
-        renderCart();
-      }
-
-      function addToCart(product) {
-        var item = cart.find(function (cartItem) {
-          return cartItem.id === product.id;
-        });
-
-        if (item) {
-          item.quantity += 1;
-        } else {
-          cart.push({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            quantity: 1
-          });
-        }
-
+      if (pageName === "sales") {
+        getElement("pageTitle").textContent = "Kassieren";
+        getElement("backButton").className = "icon back show";
         renderSales();
       }
 
-      function changeQuantity(id, amount) {
-        var item = cart.find(function (cartItem) {
-          return cartItem.id === id;
-        });
+      if (pageName === "payment") {
+        getElement("pageTitle").textContent = "Bezahlung";
+        getElement("backButton").className = "icon back show";
+        renderPayment();
+      }
+    }
 
-        if (!item) return;
+    function addProduct() {
+      var name = getElement("productNameInput").value;
+      var priceText = getElement("productPriceInput").value;
+      var price = Number(priceText.replace(",", "."));
 
-        item.quantity += amount;
+      name = name.replace(/^\s+|\s+$/g, "");
 
-        if (item.quantity <= 0) {
-          cart = cart.filter(function (cartItem) {
-            return cartItem.id !== id;
-          });
-        }
-
-        renderSales();
+      if (name === "") {
+        showNotice("setupNotice", "Bitte gib einen Produktnamen ein.");
+        return;
       }
 
-      function renderCart() {
-        var cartList = getElement("cartList");
-        var cartSummary = getElement("cartSummary");
-        cartList.innerHTML = "";
-
-        if (cart.length === 0) {
-          cartSummary.textContent = "Noch nichts ausgewählt.";
-          cartList.innerHTML = "<p>Der Einkauf ist noch leer.</p>";
-          return;
-        }
-
-        var itemCount = cart.reduce(function (sum, item) {
-          return sum + item.quantity;
-        }, 0);
-
-        cartSummary.textContent = itemCount + " Produkt" + (itemCount === 1 ? "" : "e") + " ausgewählt - Gesamt: " + formatEuro(getCartTotal());
-
-        cart.forEach(function (item) {
-          var row = document.createElement("div");
-          row.className = "row";
-          row.innerHTML = "<strong>" + item.quantity + " × " + escapeHtml(item.name) + "</strong><span>" + formatEuro(item.price * item.quantity) + "</span>";
-
-          var controls = document.createElement("div");
-
-          var minusButton = document.createElement("button");
-          minusButton.className = "light";
-          minusButton.type = "button";
-          minusButton.textContent = "-";
-          minusButton.addEventListener("click", function () {
-            changeQuantity(item.id, -1);
-          });
-
-          var plusButton = document.createElement("button");
-          plusButton.className = "light";
-          plusButton.type = "button";
-          plusButton.textContent = "+";
-          plusButton.addEventListener("click", function () {
-            changeQuantity(item.id, 1);
-          });
-
-          controls.appendChild(minusButton);
-          controls.appendChild(plusButton);
-          row.appendChild(controls);
-          cartList.appendChild(row);
-        });
-
-        var totalRow = document.createElement("div");
-        totalRow.className = "row";
-        totalRow.innerHTML = "<strong>Gesamt</strong><strong>" + formatEuro(getCartTotal()) + "</strong><span></span>";
-        cartList.appendChild(totalRow);
+      if (isNaN(price) || price <= 0) {
+        showNotice("setupNotice", "Bitte gib einen gültigen Preis ein.");
+        return;
       }
 
-      function renderPayment() {
-        var total = getCartTotal();
-        getElement("paymentTotal").textContent = formatEuro(total);
-        getElement("paidAmount").textContent = formatEuro(paid);
-        getElement("changeAmount").textContent = formatEuro(Math.max(0, paid - total));
+      hideNotice("setupNotice");
 
-        if (paid > 0 && paid < total) {
-          showNotice(getElement("paymentNotice"), "Der gegebene Betrag reicht noch nicht aus.");
-        } else {
-          hideNotice(getElement("paymentNotice"));
-        }
-
-        var moneyButtons = getElement("moneyButtons");
-        moneyButtons.innerHTML = "";
-
-        moneyOptions.forEach(function (amount) {
-          var button = document.createElement("button");
-          button.className = "choice";
-          button.type = "button";
-          button.textContent = formatEuro(amount);
-          button.addEventListener("click", function () {
-            paid = Math.round((paid + amount) * 100) / 100;
-            renderPayment();
-          });
-          moneyButtons.appendChild(button);
-        });
-
-        var exactButton = document.createElement("button");
-        exactButton.className = "choice blue";
-        exactButton.type = "button";
-        exactButton.textContent = "Passend";
-        exactButton.addEventListener("click", function () {
-          paid = total;
-          renderPayment();
-        });
-
-        var resetButton = document.createElement("button");
-        resetButton.className = "choice danger";
-        resetButton.type = "button";
-        resetButton.textContent = "Geld löschen";
-        resetButton.addEventListener("click", function () {
-          paid = 0;
-          renderPayment();
-        });
-
-        moneyButtons.appendChild(exactButton);
-        moneyButtons.appendChild(resetButton);
-      }
-
-      function saveSaleToStats() {
-        stats.revenue = Math.round((stats.revenue + getCartTotal()) * 100) / 100;
-
-        cart.forEach(function (item) {
-          if (!stats.products[item.id]) {
-            stats.products[item.id] = {
-              name: item.name,
-              quantity: 0,
-              revenue: 0
-            };
-          }
-
-          stats.products[item.id].name = item.name;
-          stats.products[item.id].quantity += item.quantity;
-          stats.products[item.id].revenue = Math.round((stats.products[item.id].revenue + item.price * item.quantity) * 100) / 100;
-        });
-
-        saveData();
-      }
-
-      function renderStats() {
-        var items = Object.values(stats.products);
-        var soldTotal = items.reduce(function (sum, item) {
-          return sum + item.quantity;
-        }, 0);
-
-        getElement("soldTotal").textContent = soldTotal;
-        getElement("revenueTotal").textContent = formatEuro(stats.revenue);
-
-        var statsList = getElement("statsList");
-        statsList.innerHTML = "";
-
-        if (items.length === 0) {
-          statsList.innerHTML = "<p>Noch keine Verkäufe abgeschlossen.</p>";
-          return;
-        }
-
-        items.sort(function (a, b) {
-          return b.quantity - a.quantity;
-        }).forEach(function (item) {
-          var row = document.createElement("div");
-          row.className = "row";
-          row.innerHTML = "<strong>" + escapeHtml(item.name) + "</strong><span>" + item.quantity + " verkauft</span><strong>" + formatEuro(item.revenue) + "</strong>";
-          statsList.appendChild(row);
-        });
-      }
-
-      function finishSaleStep() {
-        if (currentPage === "setup") {
-          if (products.length === 0) {
-            showNotice(getElement("setupNotice"), "Bitte lege zuerst mindestens ein Produkt an.");
-            return;
-          }
-          showPage("sales");
-          return;
-        }
-
-        if (currentPage === "sales") {
-          if (cart.length === 0) return;
-          paid = 0;
-          showPage("payment");
-          return;
-        }
-
-        if (currentPage === "payment") {
-          if (paid < getCartTotal()) {
-            showNotice(getElement("paymentNotice"), "Bitte wähle genug Geld aus, bevor du abschließt.");
-            return;
-          }
-
-          saveSaleToStats();
-          cart = [];
-          paid = 0;
-          showPage("sales");
-        }
-      }
-
-      getElement("addProductButton").addEventListener("click", addProduct);
-      getElement("finishButton").addEventListener("click", finishSaleStep);
-
-      getElement("backButton").addEventListener("click", function () {
-        if (currentPage === "payment") showPage("sales");
-        else if (currentPage === "sales") showPage("setup");
+      products.push({
+        id: String(new Date().getTime()),
+        name: name,
+        price: Math.round(price * 100) / 100
       });
 
-      getElement("clearCartButton").addEventListener("click", function () {
+      saveData();
+      getElement("productNameInput").value = "";
+      getElement("productPriceInput").value = "";
+      renderProducts();
+    }
+
+    function deleteProduct(id) {
+      var newProducts = [];
+      var newCart = [];
+      var i;
+
+      for (i = 0; i < products.length; i++) {
+        if (products[i].id !== id) newProducts.push(products[i]);
+      }
+
+      for (i = 0; i < cart.length; i++) {
+        if (cart[i].id !== id) newCart.push(cart[i]);
+      }
+
+      products = newProducts;
+      cart = newCart;
+      saveData();
+      renderProducts();
+    }
+
+    function renderProducts() {
+      var list = getElement("productList");
+      list.innerHTML = "";
+
+      if (products.length === 0) {
+        list.innerHTML = "<p>Noch keine Produkte angelegt.</p>";
+        return;
+      }
+
+      for (var i = 0; i < products.length; i++) {
+        var product = products[i];
+        var row = document.createElement("div");
+        var deleteButton = document.createElement("button");
+
+        row.className = "row";
+        row.innerHTML = "<strong>" + escapeHtml(product.name) + "</strong><span>" + formatEuro(product.price) + "</span>";
+
+        deleteButton.type = "button";
+        deleteButton.className = "danger";
+        deleteButton.textContent = "Löschen";
+        deleteButton.setAttribute("data-id", product.id);
+        deleteButton.onclick = function () {
+          deleteProduct(this.getAttribute("data-id"));
+        };
+
+        row.appendChild(deleteButton);
+        list.appendChild(row);
+      }
+    }
+
+    function findCartItem(id) {
+      for (var i = 0; i < cart.length; i++) {
+        if (cart[i].id === id) return cart[i];
+      }
+      return null;
+    }
+
+    function addToCart(id) {
+      var product = null;
+
+      for (var i = 0; i < products.length; i++) {
+        if (products[i].id === id) product = products[i];
+      }
+
+      if (!product) return;
+
+      var item = findCartItem(id);
+
+      if (item) {
+        item.quantity += 1;
+      } else {
+        cart.push({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: 1
+        });
+      }
+
+      renderSales();
+    }
+
+    function changeQuantity(id, amount) {
+      var item = findCartItem(id);
+      var newCart = [];
+
+      if (!item) return;
+
+      item.quantity += amount;
+
+      for (var i = 0; i < cart.length; i++) {
+        if (cart[i].quantity > 0) newCart.push(cart[i]);
+      }
+
+      cart = newCart;
+      renderSales();
+    }
+
+    function renderSales() {
+      var buttons = getElement("productButtons");
+      buttons.innerHTML = "";
+
+      for (var i = 0; i < products.length; i++) {
+        var product = products[i];
+        var item = findCartItem(product.id);
+        var button = document.createElement("button");
+
+        button.type = "button";
+        button.className = item ? "choice selected" : "choice";
+        button.setAttribute("data-id", product.id);
+        button.innerHTML =
+          "<strong>" + escapeHtml(product.name) + "</strong>" +
+          "<span class=\"price\">" + formatEuro(product.price) + "</span>" +
+          (item ? "<span class=\"selected-count\">" + item.quantity + "x</span>" : "");
+
+        button.onclick = function () {
+          addToCart(this.getAttribute("data-id"));
+        };
+
+        buttons.appendChild(button);
+      }
+
+      renderCart();
+    }
+
+    function renderCart() {
+      var list = getElement("cartList");
+      var summary = getElement("cartSummary");
+      var itemCount = 0;
+
+      list.innerHTML = "";
+
+      if (cart.length === 0) {
+        summary.textContent = "Noch nichts ausgewählt.";
+        list.innerHTML = "<p>Der Einkauf ist noch leer.</p>";
+        return;
+      }
+
+      for (var i = 0; i < cart.length; i++) {
+        itemCount += cart[i].quantity;
+      }
+
+      summary.textContent = itemCount + " Produkt" + (itemCount === 1 ? "" : "e") + " ausgewählt - Gesamt: " + formatEuro(getCartTotal());
+
+      for (var j = 0; j < cart.length; j++) {
+        var item = cart[j];
+        var row = document.createElement("div");
+        var controls = document.createElement("div");
+        var minusButton = document.createElement("button");
+        var plusButton = document.createElement("button");
+
+        row.className = "row";
+        row.innerHTML = "<strong>" + item.quantity + " × " + escapeHtml(item.name) + "</strong><span>" + formatEuro(item.price * item.quantity) + "</span>";
+
+        minusButton.type = "button";
+        minusButton.className = "light";
+        minusButton.textContent = "-";
+        minusButton.setAttribute("data-id", item.id);
+        minusButton.onclick = function () {
+          changeQuantity(this.getAttribute("data-id"), -1);
+        };
+
+        plusButton.type = "button";
+        plusButton.className = "light";
+        plusButton.textContent = "+";
+        plusButton.setAttribute("data-id", item.id);
+        plusButton.onclick = function () {
+          changeQuantity(this.getAttribute("data-id"), 1);
+        };
+
+        controls.appendChild(minusButton);
+        controls.appendChild(plusButton);
+        row.appendChild(controls);
+        list.appendChild(row);
+      }
+
+      var totalRow = document.createElement("div");
+      totalRow.className = "row";
+      totalRow.innerHTML = "<strong>Gesamt</strong><strong>" + formatEuro(getCartTotal()) + "</strong><span></span>";
+      list.appendChild(totalRow);
+    }
+
+    function renderPayment() {
+      var total = getCartTotal();
+      var buttons = getElement("moneyButtons");
+
+      getElement("paymentTotal").textContent = formatEuro(total);
+      getElement("paidAmount").textContent = formatEuro(paid);
+      getElement("changeAmount").textContent = formatEuro(Math.max(0, paid - total));
+
+      if (paid > 0 && paid < total) {
+        showNotice("paymentNotice", "Der gegebene Betrag reicht noch nicht aus.");
+      } else {
+        hideNotice("paymentNotice");
+      }
+
+      buttons.innerHTML = "";
+
+      for (var i = 0; i < moneyOptions.length; i++) {
+        var moneyButton = document.createElement("button");
+        moneyButton.type = "button";
+        moneyButton.className = "choice";
+        moneyButton.textContent = formatEuro(moneyOptions[i]);
+        moneyButton.setAttribute("data-amount", moneyOptions[i]);
+        moneyButton.onclick = function () {
+          paid = Math.round((paid + Number(this.getAttribute("data-amount"))) * 100) / 100;
+          renderPayment();
+        };
+        buttons.appendChild(moneyButton);
+      }
+
+      var exactButton = document.createElement("button");
+      exactButton.type = "button";
+      exactButton.className = "choice blue";
+      exactButton.textContent = "Passend";
+      exactButton.onclick = function () {
+        paid = total;
+        renderPayment();
+      };
+
+      var resetButton = document.createElement("button");
+      resetButton.type = "button";
+      resetButton.className = "choice danger";
+      resetButton.textContent = "Geld löschen";
+      resetButton.onclick = function () {
+        paid = 0;
+        renderPayment();
+      };
+
+      buttons.appendChild(exactButton);
+      buttons.appendChild(resetButton);
+    }
+
+    function saveSaleToStats() {
+      stats.revenue = Math.round((stats.revenue + getCartTotal()) * 100) / 100;
+
+      for (var i = 0; i < cart.length; i++) {
+        var item = cart[i];
+
+        if (!stats.products[item.id]) {
+          stats.products[item.id] = {
+            name: item.name,
+            quantity: 0,
+            revenue: 0
+          };
+        }
+
+        stats.products[item.id].name = item.name;
+        stats.products[item.id].quantity += item.quantity;
+        stats.products[item.id].revenue = Math.round((stats.products[item.id].revenue + item.price * item.quantity) * 100) / 100;
+      }
+
+      saveData();
+    }
+
+    function renderStats() {
+      var list = getElement("statsList");
+      var items = [];
+      var soldTotal = 0;
+
+      for (var id in stats.products) {
+        if (stats.products.hasOwnProperty(id)) {
+          items.push(stats.products[id]);
+        }
+      }
+
+      items.sort(function (a, b) {
+        return b.quantity - a.quantity;
+      });
+
+      list.innerHTML = "";
+
+      for (var i = 0; i < items.length; i++) {
+        soldTotal += items[i].quantity;
+      }
+
+      getElement("soldTotal").textContent = soldTotal;
+      getElement("revenueTotal").textContent = formatEuro(stats.revenue);
+
+      if (items.length === 0) {
+        list.innerHTML = "<p>Noch keine Verkäufe abgeschlossen.</p>";
+        return;
+      }
+
+      for (var j = 0; j < items.length; j++) {
+        var row = document.createElement("div");
+        row.className = "row";
+        row.innerHTML = "<strong>" + escapeHtml(items[j].name) + "</strong><span>" + items[j].quantity + " verkauft</span><strong>" + formatEuro(items[j].revenue) + "</strong>";
+        list.appendChild(row);
+      }
+    }
+
+    function finishStep() {
+      if (currentPage === "setup") {
+        if (products.length === 0) {
+          showNotice("setupNotice", "Bitte lege zuerst mindestens ein Produkt an.");
+          return;
+        }
+
+        showPage("sales");
+        return;
+      }
+
+      if (currentPage === "sales") {
+        if (cart.length === 0) return;
+        paid = 0;
+        showPage("payment");
+        return;
+      }
+
+      if (currentPage === "payment") {
+        if (paid < getCartTotal()) {
+          showNotice("paymentNotice", "Bitte wähle genug Geld aus, bevor du abschließt.");
+          return;
+        }
+
+        saveSaleToStats();
+        cart = [];
+        paid = 0;
+        showPage("sales");
+      }
+    }
+
+    function startApp() {
+      loadData();
+      renderProducts();
+
+      getElement("addProductButton").onclick = addProduct;
+      getElement("finishButton").onclick = finishStep;
+
+      getElement("backButton").onclick = function () {
+        if (currentPage === "payment") {
+          showPage("sales");
+        } else if (currentPage === "sales") {
+          showPage("setup");
+        }
+      };
+
+      getElement("clearCartButton").onclick = function () {
         cart = [];
         renderSales();
-      });
+      };
 
-      getElement("statsButton").addEventListener("click", function () {
+      getElement("statsButton").onclick = function () {
         renderStats();
-        getElement("statsModal").classList.add("show");
-      });
+        getElement("statsModal").className = "modal-bg show";
+      };
 
-      getElement("closeStatsButton").addEventListener("click", function () {
-        getElement("statsModal").classList.remove("show");
-      });
+      getElement("closeStatsButton").onclick = function () {
+        getElement("statsModal").className = "modal-bg";
+      };
 
-      getElement("statsModal").addEventListener("click", function (event) {
+      getElement("statsModal").onclick = function (event) {
         if (event.target === getElement("statsModal")) {
-          getElement("statsModal").classList.remove("show");
+          getElement("statsModal").className = "modal-bg";
         }
-      });
+      };
 
-      getElement("resetStatsButton").addEventListener("click", function () {
+      getElement("resetStatsButton").onclick = function () {
         stats = { revenue: 0, products: {} };
         saveData();
         renderStats();
-      });
+      };
 
-      getElement("productNameInput").addEventListener("keydown", function (event) {
-        if (event.key === "Enter") getElement("productPriceInput").focus();
-      });
+      getElement("productNameInput").onkeydown = function (event) {
+        if (event.key === "Enter") {
+          getElement("productPriceInput").focus();
+        }
+      };
 
-      getElement("productPriceInput").addEventListener("keydown", function (event) {
-        if (event.key === "Enter") addProduct();
-      });
+      getElement("productPriceInput").onkeydown = function (event) {
+        if (event.key === "Enter") {
+          addProduct();
+        }
+      };
+    }
 
-      renderProducts();
-    });
+    startApp();
   </script>
 </body>
 </html>
+```
