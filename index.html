@@ -38,11 +38,9 @@
 
     .page { display: none; }
     .page.active { display: block; }
-
     .spacer { flex: 1; }
 
-    .panel,
-    .box {
+    .panel, .box {
       background: white;
       border: 1px solid #d7dde5;
       border-radius: 8px;
@@ -94,19 +92,9 @@
     }
 
     .light:hover { background: #e1e7ef; }
-
-    .danger {
-      background: #b42318;
-      color: white;
-    }
-
+    .danger { background: #b42318; color: white; }
     .danger:hover { background: #8f1c13; }
-
-    .blue {
-      background: #2563eb;
-      color: white;
-    }
-
+    .blue { background: #2563eb; color: white; }
     .blue:hover { background: #1d4ed8; }
 
     .icon {
@@ -198,8 +186,7 @@
       margin: 18px 0;
     }
 
-    .summary strong,
-    .box strong {
+    .summary strong, .box strong {
       display: block;
       font-size: 30px;
       margin-top: 6px;
@@ -266,34 +253,22 @@
     }
 
     @media (max-width: 720px) {
-      .form,
-      .row,
-      .summary,
-      .two {
-        grid-template-columns: 1fr;
-      }
-
-      .finish {
-        left: 12px;
-        right: 12px;
-      }
-
-      .finish button {
-        width: 100%;
-      }
+      .form, .row, .summary, .two { grid-template-columns: 1fr; }
+      .finish { left: 12px; right: 12px; }
+      .finish button { width: 100%; }
     }
   </style>
 </head>
 <body>
   <header>
-    <button id="back" class="icon back" type="button">‹</button>
-    <h1 id="title">Produkte anlegen</h1>
+    <button id="backButton" class="icon back" type="button">‹</button>
+    <h1 id="pageTitle">Produkte anlegen</h1>
     <div class="spacer"></div>
-    <button id="statsBtn" class="icon blue" type="button">€</button>
+    <button id="statsButton" class="icon blue" type="button">€</button>
   </header>
 
   <main>
-    <section id="setup" class="page active">
+    <section id="setupPage" class="page active">
       <div class="panel">
         <h2>Produkt hinzufügen</h2>
         <p>Gib Produktname und Preis ein.</p>
@@ -301,15 +276,15 @@
         <div class="form">
           <label>
             Produktname
-            <input id="name" placeholder="z. B. Apfel">
+            <input id="productNameInput" placeholder="z. B. Apfel">
           </label>
 
           <label>
             Preis in Euro
-            <input id="price" inputmode="decimal" placeholder="1,50">
+            <input id="productPriceInput" inputmode="decimal" placeholder="1,50">
           </label>
 
-          <button id="add" type="button">Hinzufügen</button>
+          <button id="addProductButton" type="button">Hinzufügen</button>
         </div>
 
         <div id="setupNotice" class="notice"></div>
@@ -317,7 +292,7 @@
       </div>
     </section>
 
-    <section id="sales" class="page">
+    <section id="salesPage" class="page">
       <h2>Produkte auswählen</h2>
       <p>Drücke auf ein Produkt, um es zum Einkauf hinzuzufügen.</p>
 
@@ -325,45 +300,45 @@
 
       <div class="panel" style="margin-top:20px">
         <h2>Aktueller Einkauf</h2>
-        <button id="clearCart" class="light" type="button">Einkauf leeren</button>
+        <button id="clearCartButton" class="light" type="button">Einkauf leeren</button>
         <div id="cartSummary" class="cart-summary">Noch nichts ausgewählt.</div>
         <div id="cartList" class="list"></div>
       </div>
     </section>
 
-    <section id="payment" class="page">
+    <section id="paymentPage" class="page">
       <h2>Bezahlung</h2>
       <p>Wähle aus, wie viel Geld der Kunde gibt.</p>
 
       <div class="summary">
         <div class="box">
           Gesamt
-          <strong id="total">0,00 €</strong>
+          <strong id="paymentTotal">0,00 €</strong>
         </div>
         <div class="box">
           Gegeben
-          <strong id="paid">0,00 €</strong>
+          <strong id="paidAmount">0,00 €</strong>
         </div>
         <div class="box">
           Wechselgeld
-          <strong id="change">0,00 €</strong>
+          <strong id="changeAmount">0,00 €</strong>
         </div>
       </div>
 
-      <div id="payNotice" class="notice"></div>
+      <div id="paymentNotice" class="notice"></div>
       <div id="moneyButtons" class="grid"></div>
     </section>
   </main>
 
   <div class="finish">
-    <button id="finish" type="button">Fertig</button>
+    <button id="finishButton" type="button">Fertig</button>
   </div>
 
   <div id="statsModal" class="modal-bg">
     <div class="modal">
       <div class="modal-head">
         <h2>Verkaufsstatistik</h2>
-        <button id="closeStats" class="light" type="button">Schließen</button>
+        <button id="closeStatsButton" class="light" type="button">Schließen</button>
       </div>
 
       <div class="two">
@@ -378,414 +353,437 @@
       </div>
 
       <div id="statsList" class="list"></div>
-      <button id="resetStats" class="danger" type="button" style="margin-top:16px">Statistik löschen</button>
+      <button id="resetStatsButton" class="danger" type="button" style="margin-top:16px">Statistik löschen</button>
     </div>
   </div>
 
   <script>
-    const $ = id => document.getElementById(id);
-
-    const euro = value => value.toLocaleString("de-AT", {
-      style: "currency",
-      currency: "EUR"
-    });
-
-    let page = "setup";
-    let products = [];
-    let cart = [];
-    let paid = 0;
-    let stats = {
-      revenue: 0,
-      products: {}
-    };
-
-    const moneyOptions = [0.05, 0.10, 0.20, 0.50, 1, 2, 5, 10, 20, 50, 100];
-
-    function loadData() {
-      products = JSON.parse(localStorage.getItem("cashProducts") || "[]");
-      stats = JSON.parse(localStorage.getItem("cashStats") || '{"revenue":0,"products":{}}');
-    }
-
-    function saveData() {
-      localStorage.setItem("cashProducts", JSON.stringify(products));
-      localStorage.setItem("cashStats", JSON.stringify(stats));
-    }
-
-    function escapeHtml(text) {
-      const span = document.createElement("span");
-      span.textContent = text;
-      return span.innerHTML;
-    }
-
-    function showNotice(element, message) {
-      element.textContent = message;
-      element.classList.add("show");
-    }
-
-    function hideNotice(element) {
-      element.classList.remove("show");
-    }
-
-    function getCartTotal() {
-      return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    }
-
-    function showPage(nextPage) {
-      page = nextPage;
-
-      ["setup", "sales", "payment"].forEach(id => {
-        $(id).classList.toggle("active", id === nextPage);
-      });
-
-      $("title").textContent = {
-        setup: "Produkte anlegen",
-        sales: "Kassieren",
-        payment: "Bezahlung"
-      }[nextPage];
-
-      $("back").classList.toggle("show", nextPage !== "setup");
-
-      if (nextPage === "sales") renderSales();
-      if (nextPage === "payment") renderPayment();
-    }
-
-    function addProduct() {
-      const name = $("name").value.trim();
-      const price = Number($("price").value.replace(",", "."));
-
-      if (!name) {
-        showNotice($("setupNotice"), "Bitte gib einen Produktnamen ein.");
-        return;
+    document.addEventListener("DOMContentLoaded", function () {
+      function getElement(id) {
+        return document.getElementById(id);
       }
 
-      if (!Number.isFinite(price) || price <= 0) {
-        showNotice($("setupNotice"), "Bitte gib einen gültigen Preis ein.");
-        return;
-      }
-
-      hideNotice($("setupNotice"));
-
-      products.push({
-        id: Date.now().toString(),
-        name,
-        price: Math.round(price * 100) / 100
-      });
-
-      saveData();
-
-      $("name").value = "";
-      $("price").value = "";
-      $("name").focus();
-
-      renderProducts();
-    }
-
-    function renderProducts() {
-      $("productList").innerHTML = "";
-
-      if (products.length === 0) {
-        $("productList").innerHTML = "<p>Noch keine Produkte angelegt.</p>";
-        return;
-      }
-
-      products.forEach(product => {
-        const row = document.createElement("div");
-        row.className = "row";
-        row.innerHTML = `
-          <strong>${escapeHtml(product.name)}</strong>
-          <span>${euro(product.price)}</span>
-        `;
-
-        const deleteButton = document.createElement("button");
-        deleteButton.className = "danger";
-        deleteButton.textContent = "Löschen";
-        deleteButton.onclick = () => {
-          products = products.filter(item => item.id !== product.id);
-          cart = cart.filter(item => item.id !== product.id);
-          saveData();
-          renderProducts();
-        };
-
-        row.appendChild(deleteButton);
-        $("productList").appendChild(row);
-      });
-    }
-
-    function renderSales() {
-      $("productButtons").innerHTML = "";
-
-      products.forEach(product => {
-        const selected = cart.find(item => item.id === product.id);
-
-        const button = document.createElement("button");
-        button.className = selected ? "choice selected" : "choice";
-        button.innerHTML = `
-          <strong>${escapeHtml(product.name)}</strong>
-          <span class="price">${euro(product.price)}</span>
-          ${selected ? `<span class="selected-count">${selected.quantity}x</span>` : ""}
-        `;
-
-        button.onclick = () => {
-          addToCart(product);
-        };
-
-        $("productButtons").appendChild(button);
-      });
-
-      renderCart();
-    }
-
-    function addToCart(product) {
-      const item = cart.find(cartItem => cartItem.id === product.id);
-
-      if (item) {
-        item.quantity++;
-      } else {
-        cart.push({
-          ...product,
-          quantity: 1
+      function formatEuro(value) {
+        return value.toLocaleString("de-AT", {
+          style: "currency",
+          currency: "EUR"
         });
       }
 
-      renderSales();
-    }
-
-    function changeQuantity(id, amount) {
-      const item = cart.find(cartItem => cartItem.id === id);
-      if (!item) return;
-
-      item.quantity += amount;
-
-      if (item.quantity <= 0) {
-        cart = cart.filter(cartItem => cartItem.id !== id);
+      function readJson(key, fallback) {
+        try {
+          var saved = localStorage.getItem(key);
+          return saved ? JSON.parse(saved) : fallback;
+        } catch (error) {
+          return fallback;
+        }
       }
 
-      renderSales();
-    }
-
-    function renderCart() {
-      $("cartList").innerHTML = "";
-
-      if (cart.length === 0) {
-        $("cartSummary").textContent = "Noch nichts ausgewählt.";
-        $("cartList").innerHTML = "<p>Der Einkauf ist noch leer.</p>";
-        return;
+      function escapeHtml(text) {
+        var span = document.createElement("span");
+        span.textContent = text;
+        return span.innerHTML;
       }
 
-      const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-      $("cartSummary").textContent = `${itemCount} Produkt${itemCount === 1 ? "" : "e"} ausgewählt - Gesamt: ${euro(getCartTotal())}`;
+      var currentPage = "setup";
+      var products = readJson("cashProducts", []);
+      var cart = [];
+      var paid = 0;
+      var stats = readJson("cashStats", { revenue: 0, products: {} });
+      var moneyOptions = [0.05, 0.10, 0.20, 0.50, 1, 2, 5, 10, 20, 50, 100];
 
-      cart.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "row";
-        row.innerHTML = `
-          <strong>${item.quantity} × ${escapeHtml(item.name)}</strong>
-          <span>${euro(item.price * item.quantity)}</span>
-        `;
-
-        const controls = document.createElement("div");
-
-        const minus = document.createElement("button");
-        minus.className = "light";
-        minus.textContent = "-";
-        minus.onclick = () => changeQuantity(item.id, -1);
-
-        const plus = document.createElement("button");
-        plus.className = "light";
-        plus.textContent = "+";
-        plus.onclick = () => changeQuantity(item.id, 1);
-
-        controls.append(minus, plus);
-        row.appendChild(controls);
-
-        $("cartList").appendChild(row);
-      });
-
-      const totalRow = document.createElement("div");
-      totalRow.className = "row";
-      totalRow.innerHTML = `
-        <strong>Gesamt</strong>
-        <strong>${euro(getCartTotal())}</strong>
-        <span></span>
-      `;
-
-      $("cartList").appendChild(totalRow);
-    }
-
-    function renderPayment() {
-      const total = getCartTotal();
-
-      $("total").textContent = euro(total);
-      $("paid").textContent = euro(paid);
-      $("change").textContent = euro(Math.max(0, paid - total));
-
-      if (paid > 0 && paid < total) {
-        showNotice($("payNotice"), "Der gegebene Betrag reicht noch nicht aus.");
-      } else {
-        hideNotice($("payNotice"));
+      if (!stats || typeof stats !== "object" || !stats.products) {
+        stats = { revenue: 0, products: {} };
       }
 
-      $("moneyButtons").innerHTML = "";
+      function saveData() {
+        localStorage.setItem("cashProducts", JSON.stringify(products));
+        localStorage.setItem("cashStats", JSON.stringify(stats));
+      }
 
-      moneyOptions.forEach(amount => {
-        const button = document.createElement("button");
-        button.className = "choice";
-        button.textContent = euro(amount);
-        button.onclick = () => {
-          paid = Math.round((paid + amount) * 100) / 100;
-          renderPayment();
-        };
-        $("moneyButtons").appendChild(button);
-      });
+      function showNotice(element, message) {
+        element.textContent = message;
+        element.classList.add("show");
+      }
 
-      const exactButton = document.createElement("button");
-      exactButton.className = "choice blue";
-      exactButton.textContent = "Passend";
-      exactButton.onclick = () => {
-        paid = total;
-        renderPayment();
-      };
+      function hideNotice(element) {
+        element.classList.remove("show");
+      }
 
-      const resetButton = document.createElement("button");
-      resetButton.className = "choice danger";
-      resetButton.textContent = "Geld löschen";
-      resetButton.onclick = () => {
-        paid = 0;
-        renderPayment();
-      };
+      function getCartTotal() {
+        return cart.reduce(function (sum, item) {
+          return sum + item.price * item.quantity;
+        }, 0);
+      }
 
-      $("moneyButtons").append(exactButton, resetButton);
-    }
+      function showPage(nextPage) {
+        currentPage = nextPage;
 
-    function saveSaleToStats() {
-      stats.revenue = Math.round((stats.revenue + getCartTotal()) * 100) / 100;
+        getElement("setupPage").classList.toggle("active", nextPage === "setup");
+        getElement("salesPage").classList.toggle("active", nextPage === "sales");
+        getElement("paymentPage").classList.toggle("active", nextPage === "payment");
 
-      cart.forEach(item => {
-        if (!stats.products[item.id]) {
-          stats.products[item.id] = {
-            name: item.name,
-            quantity: 0,
-            revenue: 0
-          };
+        getElement("pageTitle").textContent = {
+          setup: "Produkte anlegen",
+          sales: "Kassieren",
+          payment: "Bezahlung"
+        }[nextPage];
+
+        getElement("backButton").classList.toggle("show", nextPage !== "setup");
+
+        if (nextPage === "sales") renderSales();
+        if (nextPage === "payment") renderPayment();
+      }
+
+      function addProduct() {
+        var name = getElement("productNameInput").value.trim();
+        var price = Number(getElement("productPriceInput").value.replace(",", "."));
+
+        if (!name) {
+          showNotice(getElement("setupNotice"), "Bitte gib einen Produktnamen ein.");
+          return;
         }
 
-        stats.products[item.id].name = item.name;
-        stats.products[item.id].quantity += item.quantity;
-        stats.products[item.id].revenue = Math.round(
-          (stats.products[item.id].revenue + item.price * item.quantity) * 100
-        ) / 100;
-      });
+        if (!Number.isFinite(price) || price <= 0) {
+          showNotice(getElement("setupNotice"), "Bitte gib einen gültigen Preis ein.");
+          return;
+        }
 
-      saveData();
-    }
+        hideNotice(getElement("setupNotice"));
 
-    function renderStats() {
-      const items = Object.values(stats.products);
-      const soldTotal = items.reduce((sum, item) => sum + item.quantity, 0);
+        products.push({
+          id: Date.now().toString(),
+          name: name,
+          price: Math.round(price * 100) / 100
+        });
 
-      $("soldTotal").textContent = soldTotal;
-      $("revenueTotal").textContent = euro(stats.revenue);
-
-      $("statsList").innerHTML = "";
-
-      if (items.length === 0) {
-        $("statsList").innerHTML = "<p>Noch keine Verkäufe abgeschlossen.</p>";
-        return;
+        saveData();
+        getElement("productNameInput").value = "";
+        getElement("productPriceInput").value = "";
+        getElement("productNameInput").focus();
+        renderProducts();
       }
 
-      items.sort((a, b) => b.quantity - a.quantity).forEach(item => {
-        const row = document.createElement("div");
-        row.className = "row";
-        row.innerHTML = `
-          <strong>${escapeHtml(item.name)}</strong>
-          <span>${item.quantity} verkauft</span>
-          <strong>${euro(item.revenue)}</strong>
-        `;
-        $("statsList").appendChild(row);
-      });
-    }
+      function renderProducts() {
+        var list = getElement("productList");
+        list.innerHTML = "";
 
-    function finish() {
-      if (page === "setup") {
         if (products.length === 0) {
-          showNotice($("setupNotice"), "Bitte lege zuerst mindestens ein Produkt an.");
+          list.innerHTML = "<p>Noch keine Produkte angelegt.</p>";
           return;
         }
 
-        showPage("sales");
-        return;
+        products.forEach(function (product) {
+          var row = document.createElement("div");
+          row.className = "row";
+          row.innerHTML = "<strong>" + escapeHtml(product.name) + "</strong><span>" + formatEuro(product.price) + "</span>";
+
+          var deleteButton = document.createElement("button");
+          deleteButton.className = "danger";
+          deleteButton.type = "button";
+          deleteButton.textContent = "Löschen";
+          deleteButton.addEventListener("click", function () {
+            products = products.filter(function (item) {
+              return item.id !== product.id;
+            });
+            cart = cart.filter(function (item) {
+              return item.id !== product.id;
+            });
+            saveData();
+            renderProducts();
+          });
+
+          row.appendChild(deleteButton);
+          list.appendChild(row);
+        });
       }
 
-      if (page === "sales") {
-        if (cart.length === 0) return;
+      function renderSales() {
+        var productButtons = getElement("productButtons");
+        productButtons.innerHTML = "";
 
-        paid = 0;
-        showPage("payment");
-        return;
+        products.forEach(function (product) {
+          var selected = cart.find(function (item) {
+            return item.id === product.id;
+          });
+
+          var button = document.createElement("button");
+          button.type = "button";
+          button.className = selected ? "choice selected" : "choice";
+          button.innerHTML =
+            "<strong>" + escapeHtml(product.name) + "</strong>" +
+            "<span class=\"price\">" + formatEuro(product.price) + "</span>" +
+            (selected ? "<span class=\"selected-count\">" + selected.quantity + "x</span>" : "");
+
+          button.addEventListener("click", function () {
+            addToCart(product);
+          });
+
+          productButtons.appendChild(button);
+        });
+
+        renderCart();
       }
 
-      if (page === "payment") {
-        if (paid < getCartTotal()) {
-          showNotice($("payNotice"), "Bitte wähle genug Geld aus, bevor du abschließt.");
+      function addToCart(product) {
+        var item = cart.find(function (cartItem) {
+          return cartItem.id === product.id;
+        });
+
+        if (item) {
+          item.quantity += 1;
+        } else {
+          cart.push({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: 1
+          });
+        }
+
+        renderSales();
+      }
+
+      function changeQuantity(id, amount) {
+        var item = cart.find(function (cartItem) {
+          return cartItem.id === id;
+        });
+
+        if (!item) return;
+
+        item.quantity += amount;
+
+        if (item.quantity <= 0) {
+          cart = cart.filter(function (cartItem) {
+            return cartItem.id !== id;
+          });
+        }
+
+        renderSales();
+      }
+
+      function renderCart() {
+        var cartList = getElement("cartList");
+        var cartSummary = getElement("cartSummary");
+        cartList.innerHTML = "";
+
+        if (cart.length === 0) {
+          cartSummary.textContent = "Noch nichts ausgewählt.";
+          cartList.innerHTML = "<p>Der Einkauf ist noch leer.</p>";
           return;
         }
 
-        saveSaleToStats();
+        var itemCount = cart.reduce(function (sum, item) {
+          return sum + item.quantity;
+        }, 0);
 
+        cartSummary.textContent = itemCount + " Produkt" + (itemCount === 1 ? "" : "e") + " ausgewählt - Gesamt: " + formatEuro(getCartTotal());
+
+        cart.forEach(function (item) {
+          var row = document.createElement("div");
+          row.className = "row";
+          row.innerHTML = "<strong>" + item.quantity + " × " + escapeHtml(item.name) + "</strong><span>" + formatEuro(item.price * item.quantity) + "</span>";
+
+          var controls = document.createElement("div");
+
+          var minusButton = document.createElement("button");
+          minusButton.className = "light";
+          minusButton.type = "button";
+          minusButton.textContent = "-";
+          minusButton.addEventListener("click", function () {
+            changeQuantity(item.id, -1);
+          });
+
+          var plusButton = document.createElement("button");
+          plusButton.className = "light";
+          plusButton.type = "button";
+          plusButton.textContent = "+";
+          plusButton.addEventListener("click", function () {
+            changeQuantity(item.id, 1);
+          });
+
+          controls.appendChild(minusButton);
+          controls.appendChild(plusButton);
+          row.appendChild(controls);
+          cartList.appendChild(row);
+        });
+
+        var totalRow = document.createElement("div");
+        totalRow.className = "row";
+        totalRow.innerHTML = "<strong>Gesamt</strong><strong>" + formatEuro(getCartTotal()) + "</strong><span></span>";
+        cartList.appendChild(totalRow);
+      }
+
+      function renderPayment() {
+        var total = getCartTotal();
+        getElement("paymentTotal").textContent = formatEuro(total);
+        getElement("paidAmount").textContent = formatEuro(paid);
+        getElement("changeAmount").textContent = formatEuro(Math.max(0, paid - total));
+
+        if (paid > 0 && paid < total) {
+          showNotice(getElement("paymentNotice"), "Der gegebene Betrag reicht noch nicht aus.");
+        } else {
+          hideNotice(getElement("paymentNotice"));
+        }
+
+        var moneyButtons = getElement("moneyButtons");
+        moneyButtons.innerHTML = "";
+
+        moneyOptions.forEach(function (amount) {
+          var button = document.createElement("button");
+          button.className = "choice";
+          button.type = "button";
+          button.textContent = formatEuro(amount);
+          button.addEventListener("click", function () {
+            paid = Math.round((paid + amount) * 100) / 100;
+            renderPayment();
+          });
+          moneyButtons.appendChild(button);
+        });
+
+        var exactButton = document.createElement("button");
+        exactButton.className = "choice blue";
+        exactButton.type = "button";
+        exactButton.textContent = "Passend";
+        exactButton.addEventListener("click", function () {
+          paid = total;
+          renderPayment();
+        });
+
+        var resetButton = document.createElement("button");
+        resetButton.className = "choice danger";
+        resetButton.type = "button";
+        resetButton.textContent = "Geld löschen";
+        resetButton.addEventListener("click", function () {
+          paid = 0;
+          renderPayment();
+        });
+
+        moneyButtons.appendChild(exactButton);
+        moneyButtons.appendChild(resetButton);
+      }
+
+      function saveSaleToStats() {
+        stats.revenue = Math.round((stats.revenue + getCartTotal()) * 100) / 100;
+
+        cart.forEach(function (item) {
+          if (!stats.products[item.id]) {
+            stats.products[item.id] = {
+              name: item.name,
+              quantity: 0,
+              revenue: 0
+            };
+          }
+
+          stats.products[item.id].name = item.name;
+          stats.products[item.id].quantity += item.quantity;
+          stats.products[item.id].revenue = Math.round((stats.products[item.id].revenue + item.price * item.quantity) * 100) / 100;
+        });
+
+        saveData();
+      }
+
+      function renderStats() {
+        var items = Object.values(stats.products);
+        var soldTotal = items.reduce(function (sum, item) {
+          return sum + item.quantity;
+        }, 0);
+
+        getElement("soldTotal").textContent = soldTotal;
+        getElement("revenueTotal").textContent = formatEuro(stats.revenue);
+
+        var statsList = getElement("statsList");
+        statsList.innerHTML = "";
+
+        if (items.length === 0) {
+          statsList.innerHTML = "<p>Noch keine Verkäufe abgeschlossen.</p>";
+          return;
+        }
+
+        items.sort(function (a, b) {
+          return b.quantity - a.quantity;
+        }).forEach(function (item) {
+          var row = document.createElement("div");
+          row.className = "row";
+          row.innerHTML = "<strong>" + escapeHtml(item.name) + "</strong><span>" + item.quantity + " verkauft</span><strong>" + formatEuro(item.revenue) + "</strong>";
+          statsList.appendChild(row);
+        });
+      }
+
+      function finishSaleStep() {
+        if (currentPage === "setup") {
+          if (products.length === 0) {
+            showNotice(getElement("setupNotice"), "Bitte lege zuerst mindestens ein Produkt an.");
+            return;
+          }
+          showPage("sales");
+          return;
+        }
+
+        if (currentPage === "sales") {
+          if (cart.length === 0) return;
+          paid = 0;
+          showPage("payment");
+          return;
+        }
+
+        if (currentPage === "payment") {
+          if (paid < getCartTotal()) {
+            showNotice(getElement("paymentNotice"), "Bitte wähle genug Geld aus, bevor du abschließt.");
+            return;
+          }
+
+          saveSaleToStats();
+          cart = [];
+          paid = 0;
+          showPage("sales");
+        }
+      }
+
+      getElement("addProductButton").addEventListener("click", addProduct);
+      getElement("finishButton").addEventListener("click", finishSaleStep);
+
+      getElement("backButton").addEventListener("click", function () {
+        if (currentPage === "payment") showPage("sales");
+        else if (currentPage === "sales") showPage("setup");
+      });
+
+      getElement("clearCartButton").addEventListener("click", function () {
         cart = [];
-        paid = 0;
+        renderSales();
+      });
 
-        showPage("sales");
-      }
-    }
+      getElement("statsButton").addEventListener("click", function () {
+        renderStats();
+        getElement("statsModal").classList.add("show");
+      });
 
-    $("add").onclick = addProduct;
-    $("finish").onclick = finish;
+      getElement("closeStatsButton").addEventListener("click", function () {
+        getElement("statsModal").classList.remove("show");
+      });
 
-    $("back").onclick = () => {
-      if (page === "payment") showPage("sales");
-      else if (page === "sales") showPage("setup");
-    };
+      getElement("statsModal").addEventListener("click", function (event) {
+        if (event.target === getElement("statsModal")) {
+          getElement("statsModal").classList.remove("show");
+        }
+      });
 
-    $("clearCart").onclick = () => {
-      cart = [];
-      renderSales();
-    };
+      getElement("resetStatsButton").addEventListener("click", function () {
+        stats = { revenue: 0, products: {} };
+        saveData();
+        renderStats();
+      });
 
-    $("statsBtn").onclick = () => {
-      renderStats();
-      $("statsModal").classList.add("show");
-    };
+      getElement("productNameInput").addEventListener("keydown", function (event) {
+        if (event.key === "Enter") getElement("productPriceInput").focus();
+      });
 
-    $("closeStats").onclick = () => {
-      $("statsModal").classList.remove("show");
-    };
+      getElement("productPriceInput").addEventListener("keydown", function (event) {
+        if (event.key === "Enter") addProduct();
+      });
 
-    $("statsModal").onclick = event => {
-      if (event.target === $("statsModal")) {
-        $("statsModal").classList.remove("show");
-      }
-    };
-
-    $("resetStats").onclick = () => {
-      stats = {
-        revenue: 0,
-        products: {}
-      };
-      saveData();
-      renderStats();
-    };
-
-    $("name").onkeydown = event => {
-      if (event.key === "Enter") $("price").focus();
-    };
-
-    $("price").onkeydown = event => {
-      if (event.key === "Enter") addProduct();
-    };
-
-    loadData();
-    renderProducts();
+      renderProducts();
+    });
   </script>
 </body>
 </html>
