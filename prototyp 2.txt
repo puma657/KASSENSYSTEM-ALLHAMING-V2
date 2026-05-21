@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kassensystem</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#1f2933}header{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:12px;padding:12px 18px;background:white;border-bottom:1px solid #d7dde5}h1{margin:0;font-size:28px}h2{margin:0 0 14px}.spacer{flex:1}main{max-width:1100px;margin:auto;padding:24px 18px 96px}.page{display:none}.page.active{display:block}.panel,.box{background:white;border:1px solid #d7dde5;border-radius:8px;padding:18px;box-shadow:0 8px 22px #0001}.form{display:grid;grid-template-columns:1fr 180px auto;gap:12px;align-items:end}label{display:grid;gap:6px;font-weight:bold;color:#667085}input,button{min-height:46px;border-radius:6px;font-size:17px}input{border:1px solid #d7dde5;padding:10px}button{border:0;padding:10px 16px;font-weight:bold;cursor:pointer;background:#0f766e;color:white}button:hover{background:#0b5f59}.light{background:#eef2f7;color:#1f2933;border:1px solid #d7dde5}.danger{background:#b42318}.blue{background:#2563eb}.icon{width:46px;height:46px;padding:0;font-size:24px}.back{display:none}.back.show{display:block}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:18px}.list{display:grid;gap:10px;margin-top:18px}.row{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;background:#fbfcfe;border:1px solid #d7dde5;border-radius:8px;padding:12px}.choice{min-height:86px;text-align:left;background:white;color:#1f2933;border:1px solid #d7dde5}.choice:hover{background:#ecfdf5}.price{display:block;margin-top:6px;color:#0f766e}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}.summary strong{display:block;font-size:32px;margin-top:6px}.finish{position:fixed;right:18px;bottom:18px;z-index:20}.finish button{min-width:150px;box-shadow:0 8px 22px #0002}.notice{display:none;margin-top:14px;padding:12px;border-radius:8px;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}.notice.show{display:block}.modal-bg{display:none;position:fixed;inset:0;z-index:40;background:#0f172a77;align-items:center;justify-content:center;padding:18px}.modal-bg.show{display:flex}.modal{width:min(720px,100%);max-height:90vh;overflow:auto;background:white;border-radius:8px;padding:18px}.modal-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}@media(max-width:720px){.form,.row,.summary,.two{grid-template-columns:1fr}.finish{left:12px;right:12px}.finish button{width:100%}}
+</style>
+</head>
+<body>
+<header>
+  <button id="back" class="icon back" type="button">‹</button>
+  <h1 id="title">Produkte anlegen</h1>
+  <div class="spacer"></div>
+  <button id="statsBtn" class="icon blue" type="button">€</button>
+</header>
+
+<main>
+  <section id="setup" class="page active">
+    <div class="panel">
+      <h2>Produkt hinzufügen</h2>
+      <p>Gib Produktname und Preis ein.</p>
+      <div class="form">
+        <label>Produktname <input id="name" placeholder="z. B. Apfel"></label>
+        <label>Preis in Euro <input id="price" inputmode="decimal" placeholder="1,50"></label>
+        <button id="add" type="button">Hinzufügen</button>
+      </div>
+      <div id="setupNotice" class="notice"></div>
+      <div id="productList" class="list"></div>
+    </div>
+  </section>
+
+  <section id="sales" class="page">
+    <h2>Produkte auswählen</h2>
+    <p>Drücke auf ein Produkt, um es zum Einkauf hinzuzufügen.</p>
+    <div id="productButtons" class="grid"></div>
+    <div class="panel" style="margin-top:20px">
+      <h2>Aktueller Einkauf</h2>
+      <button id="clearCart" class="light" type="button">Einkauf leeren</button>
+      <div id="cartList" class="list"></div>
+    </div>
+  </section>
+
+  <section id="payment" class="page">
+    <h2>Bezahlung</h2>
+    <p>Wähle aus, wie viel Geld der Kunde gibt.</p>
+    <div class="summary">
+      <div class="box">Gesamt <strong id="total">0,00 €</strong></div>
+      <div class="box">Gegeben <strong id="paid">0,00 €</strong></div>
+      <div class="box">Wechselgeld <strong id="change">0,00 €</strong></div>
+    </div>
+    <div id="payNotice" class="notice"></div>
+    <div id="moneyButtons" class="grid"></div>
+  </section>
+</main>
+
+<div class="finish"><button id="finish" type="button">Fertig</button></div>
+
+<div id="statsModal" class="modal-bg">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Verkaufsstatistik</h2>
+      <button id="closeStats" class="light" type="button">Schließen</button>
+    </div>
+    <div class="two">
+      <div class="box">Verkauft insgesamt <strong id="soldTotal">0</strong></div>
+      <div class="box">Einnahmen insgesamt <strong id="revenueTotal">0,00 €</strong></div>
+    </div>
+    <div id="statsList" class="list"></div>
+    <button id="resetStats" class="danger" type="button" style="margin-top:16px">Statistik löschen</button>
+  </div>
+</div>
+
+<script>
+const €=v=>v.toLocaleString("de-AT",{style:"currency",currency:"EUR"});
+const $=id=>document.getElementById(id);
+let page="setup",products=[],cart=[],paid=0,stats={revenue:0,products:{}};
+const money=[0.05,0.10,0.20,0.50,1,2,5,10,20,50,100];
+
+function load(){products=JSON.parse(localStorage.cashProducts||"[]");stats=JSON.parse(localStorage.cashStats||'{"revenue":0,"products":{}}')}
+function save(){localStorage.cashProducts=JSON.stringify(products);localStorage.cashStats=JSON.stringify(stats)}
+function notice(el,msg){el.textContent=msg;el.classList.add("show")}
+function hide(el){el.classList.remove("show")}
+function total(){return cart.reduce((s,i)=>s+i.price*i.qty,0)}
+function show(p){page=p;["setup","sales","payment"].forEach(x=>$(x).classList.toggle("active",x===p));$("title").textContent={setup:"Produkte anlegen",sales:"Kassieren",payment:"Bezahlung"}[p];$("back").classList.toggle("show",p!=="setup");if(p==="sales")renderSales();if(p==="payment")renderPay()}
+
+function addProduct(){
+  let n=$("name").value.trim(), p=Number($("price").value.replace(",","."));
+  if(!n)return notice($("setupNotice"),"Bitte gib einen Produktnamen ein.");
+  if(!Number.isFinite(p)||p<=0)return notice($("setupNotice"),"Bitte gib einen gültigen Preis ein.");
+  hide($("setupNotice"));products.push({id:Date.now()+"",name:n,price:Math.round(p*100)/100});
+  save();$("name").value="";$("price").value="";renderProducts();
+}
+function renderProducts(){
+  $("productList").innerHTML=products.length?"":"<p>Noch keine Produkte angelegt.</p>";
+  products.forEach(p=>{
+    let r=document.createElement("div");r.className="row";
+    r.innerHTML=`<strong>${esc(p.name)}</strong><span>${€(p.price)}</span>`;
+    let b=document.createElement("button");b.className="danger";b.textContent="Löschen";b.onclick=()=>{products=products.filter(x=>x.id!==p.id);cart=cart.filter(x=>x.id!==p.id);save();renderProducts()};
+    r.appendChild(b);$("productList").appendChild(r);
+  });
+}
+function renderSales(){
+  $("productButtons").innerHTML="";
+  products.forEach(p=>{
+    let b=document.createElement("button");b.className="choice";b.innerHTML=`<strong>${esc(p.name)}</strong><span class="price">${€(p.price)}</span>`;
+    b.onclick=()=>{let i=cart.find(x=>x.id===p.id);i?i.qty++:cart.push({...p,qty:1});renderCart()};
+    $("productButtons").appendChild(b);
+  });renderCart();
+}
+function renderCart(){
+  $("cartList").innerHTML=cart.length?"":"<p>Der Einkauf ist noch leer.</p>";
+  cart.forEach(i=>{
+    let r=document.createElement("div");r.className="row";r.innerHTML=`<strong>${i.qty} × ${esc(i.name)}</strong><span>${€(i.price*i.qty)}</span>`;
+    let c=document.createElement("div"),m=document.createElement("button"),p=document.createElement("button");
+    m.className=p.className="light";m.textContent="-";p.textContent="+";
+    m.onclick=()=>{i.qty--;if(i.qty<=0)cart=cart.filter(x=>x.id!==i.id);renderCart()};p.onclick=()=>{i.qty++;renderCart()};
+    c.append(m,p);r.appendChild(c);$("cartList").appendChild(r);
+  });
+  if(cart.length){let r=document.createElement("div");r.className="row";r.innerHTML=`<strong>Gesamt</strong><strong>${€(total())}</strong><span></span>`;$("cartList").appendChild(r)}
+}
+function renderPay(){
+  $("total").textContent=€(total());$("paid").textContent=€(paid);$("change").textContent=€(Math.max(0,paid-total()));
+  paid>0&&paid<total()?notice($("payNotice"),"Der gegebene Betrag reicht noch nicht aus."):hide($("payNotice"));
+  $("moneyButtons").innerHTML="";
+  money.forEach(a=>{let b=document.createElement("button");b.className="choice";b.textContent=€(a);b.onclick=()=>{paid=Math.round((paid+a)*100)/100;renderPay()};$("moneyButtons").appendChild(b)});
+  let exact=document.createElement("button");exact.className="choice blue";exact.textContent="Passend";exact.onclick=()=>{paid=total();renderPay()};
+  let reset=document.createElement("button");reset.className="choice danger";reset.textContent="Geld löschen";reset.onclick=()=>{paid=0;renderPay()};
+  $("moneyButtons").append(exact,reset);
+}
+function saveSale(){
+  stats.revenue=Math.round((stats.revenue+total())*100)/100;
+  cart.forEach(i=>{stats.products[i.id]??={name:i.name,quantity:0,revenue:0};stats.products[i.id].name=i.name;stats.products[i.id].quantity+=i.qty;stats.products[i.id].revenue=Math.round((stats.products[i.id].revenue+i.price*i.qty)*100)/100});
+  save();
+}
+function renderStats(){
+  let items=Object.values(stats.products),count=items.reduce((s,i)=>s+i.quantity,0);
+  $("soldTotal").textContent=count;$("revenueTotal").textContent=€(stats.revenue);
+  $("statsList").innerHTML=items.length?"":"<p>Noch keine Verkäufe abgeschlossen.</p>";
+  items.sort((a,b)=>b.quantity-a.quantity).forEach(i=>{let r=document.createElement("div");r.className="row";r.innerHTML=`<strong>${esc(i.name)}</strong><span>${i.quantity} verkauft</span><strong>${€(i.revenue)}</strong>`;$("statsList").appendChild(r)});
+}
+function finish(){
+  if(page==="setup"){if(!products.length)return notice($("setupNotice"),"Bitte lege zuerst mindestens ein Produkt an.");show("sales");return}
+  if(page==="sales"){if(!cart.length)return;paid=0;show("payment");return}
+  if(paid<total())return notice($("payNotice"),"Bitte wähle genug Geld aus, bevor du abschließt.");
+  saveSale();cart=[];paid=0;show("sales");
+}
+function esc(t){let e=document.createElement("span");e.textContent=t;return e.innerHTML}
+
+$("add").onclick=addProduct;$("finish").onclick=finish;$("back").onclick=()=>show(page==="payment"?"sales":"setup");
+$("clearCart").onclick=()=>{cart=[];renderCart()};$("statsBtn").onclick=()=>{$("statsModal").classList.add("show");renderStats()};
+$("closeStats").onclick=()=>$("statsModal").classList.remove("show");$("statsModal").onclick=e=>{if(e.target===$("statsModal"))$("statsModal").classList.remove("show")};
+$("resetStats").onclick=()=>{stats={revenue:0,products:{}};save();renderStats()};
+$("price").onkeydown=e=>{if(e.key==="Enter")addProduct()};$("name").onkeydown=e=>{if(e.key==="Enter")$("price").focus()};
+load();renderProducts();
+</script>
+</body>
+</html>
